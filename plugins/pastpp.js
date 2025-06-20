@@ -1,4 +1,4 @@
-const { cmd } = require('../command');
+const { cmd } = require('../lib/command');
 const axios = require('axios');
 
 // Store search results per chat for list reply
@@ -24,7 +24,7 @@ cmd({
 
         await conn.sendMessage(from, { react: { text: "🔍", key: mek.key } });
 
-        // 1. Search Past Papers
+        // Search Past Papers
         const searchUrl = `https://api-pass.vercel.app/api/search?query=${encodeURIComponent(query)}&page=1`;
         const { data } = await axios.get(searchUrl);
 
@@ -38,7 +38,7 @@ cmd({
             image: { url: results[0].thumbnail || "https://i.ibb.co/21LhR9JS/20250615-1502-Solo-Leveling-Characters-remix-01jxsetpm9effavxjvyn37tn26.png" },
             footer: "© Thenux-AI | Past Paper Search",
             headerType: 4,
-         contextInfo: {
+            contextInfo: {
                 forwardingScore: 999,
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
@@ -55,12 +55,7 @@ cmd({
                     renderLargerThumbnail: true
                 }
             }
-
-
-                /*mentionedJid: [m.sender],
-                stanzaId: mek.key.id*/
-            }
-        
+        };
 
         // Build rows for list
         const rows = results.map((item, i) => ({
@@ -87,7 +82,7 @@ cmd({
         await conn.sendMessage(from, { react: { text: "✅", key: sentMsg.key }});
     } catch (e) {
         console.log(e);
-        await pastppConnRef.sendMessage(from, { react: { text: "❌", key: mek.key }});
+        await pastppConnRef?.sendMessage(from, { react: { text: "❌", key: mek.key }});
         reply("*ERROR ❗❗*");
     }
 });
@@ -95,47 +90,59 @@ cmd({
 // List reply handler for past paper download
 if (!global.__pastppListHandler) {
     global.__pastppListHandler = true;
-    const { setTimeout } = require('timers');
-    function waitForPastppConn() {
-        if (!pastppConnRef) return setTimeout(waitForPastppConn, 500);
+
+    async function initPastppListHandler() {
+        while (!pastppConnRef) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
         pastppConnRef.ev.on('messages.upsert', async (msgUpdate) => {
-            const msg = msgUpdate.messages?.[0];
-            if (!msg || !msg.key) return;
+            try {
+                const msg = msgUpdate.messages?.[0];
+                if (!msg || !msg.key) return;
 
-            // List reply mode
-            if (msg.message && msg.message.listResponseMessage) {
-                const selected = msg.message.listResponseMessage.singleSelectReply.selectedRowId?.trim();
-                if (!selected || !selected.startsWith('.pastpplist_')) return;
+                if (msg.message && msg.message.listResponseMessage) {
+                    const selected = msg.message.listResponseMessage.singleSelectReply.selectedRowId?.trim();
+                    if (!selected || !selected.startsWith('.pastpplist_')) return;
 
-                const idx = parseInt(selected.replace('.pastpplist_', ''));
-                const stanzaId = msg.message.listResponseMessage.contextInfo?.stanzaId || pastppLastMsgKey;
-                const results = stanzaId && pastppInfoMap[stanzaId] ? pastppInfoMap[stanzaId] : null;
-                if (!results || !results[idx]) {
-                    await pastppConnRef.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key }});
-                    return;
-                }
+                    const idx = parseInt(selected.replace('.pastpplist_', ''));
+                    const stanzaId = msg.message.listResponseMessage.contextInfo?.stanzaId || pastppLastMsgKey;
+                    const results = stanzaId && pastppInfoMap[stanzaId] ? pastppInfoMap[stanzaId] : null;
 
-                const info = results[idx];
-                // Download API call
-                try {
+                    if (!results || !results[idx]) {
+                        await pastppConnRef.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key }});
+                        return;
+                    }
+
+                    const info = results[idx];
+
                     await pastppConnRef.sendMessage(msg.key.remoteJid, { react: { text: "⏬", key: msg.key }});
+
                     const { data: dl } = await axios.get(`https://api-pass.vercel.app/api/download?url=${encodeURIComponent(info.url)}`);
+
                     if (!dl?.download_info?.download_url) {
                         await pastppConnRef.sendMessage(msg.key.remoteJid, { text: "❌ *Download link not found!*" }, { quoted: msg });
                         return;
                     }
+
                     await pastppConnRef.sendMessage(msg.key.remoteJid, {
                         document: { url: dl.download_info.download_url },
                         mimetype: 'application/pdf',
                         fileName: dl.download_info.file_name || 'pastpaper.pdf',
                         caption: `*📄 ${dl.download_info.file_title || info.title}*\n\nSource: ${info.url}\n_Powered by Thenux-ai_`
                     }, { quoted: msg });
+
                     await pastppConnRef.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key }});
-                } catch (e) {
+                }
+            } catch (error) {
+                console.error('Pastpp list reply handler error:', error);
+                if (pastppConnRef && msg && msg.key) {
                     await pastppConnRef.sendMessage(msg.key.remoteJid, { react: { text: "❌", key: msg.key }});
                     await pastppConnRef.sendMessage(msg.key.remoteJid, { text: "❌ *Failed to fetch the download link!*" }, { quoted: msg });
                 }
             }
         });
     }
-    waitForPastppConn();
+
+    initPastppListHandler();
+}
