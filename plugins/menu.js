@@ -1,41 +1,50 @@
-import { cmd } from '../lib/command.js';
+// plugins/menu.js  (CommonJS version)
+const { cmd } = require('../lib/command');
 
 cmd({
-  pattern: "menu",
-  alias: ["help", "panel", "commands"],
-  desc: "Show main menu",
-  category: "general",
-  filename: __filename,
-}, async (m, conn, { prefix, mek }) => {
+  pattern: 'menu',
+  alias: ['help', 'start'],
+  desc: 'Display main button menu',
+  react: '📋',
+  category: 'main',
+  filename: __filename            // ✅ now works in CJS
+}, async (conn, mek, m, { from, prefix }) => {
 
-  const menuText = `🧠 *Botton UI Menu*\n\n` +
-                   `╭──❍ Commands\n` +
-                   `│• ${prefix}cine – Movie Search\n` +
-                   `│• ${prefix}slanimeclub – Anime Search\n` +
-                   `│• ${prefix}settings – Bot Settings\n` +
-                   `╰─────────────`;
+  const menuText = `📋 *GOJO BOT MENU*
+━━━━━━━━━━━━━━━━━━
 
-  return await conn.sendMessage(m.chat, {
+1. *Anime*
+   • ${prefix}slanimeclub <name>
+   • ${prefix}animexin <name>
+
+2. *Movies*
+   • ${prefix}cine <title>
+   • ${prefix}film <title>
+
+3. *Tools*
+   • ${prefix}gdrive <link>
+   • ${prefix}mediafire <link>
+
+4. *News*
+   • ${prefix}hirucheck
+   • ${prefix}deranacheck
+
+5. *Settings*
+   • ${prefix}settings
+
+━━━━━━━━━━━━━━━━━━
+_© Thenux-AI | Powered by GOJO_`;
+
+  const buttons = [
+    { buttonId: `${prefix}settings`,    buttonText: { displayText: '⚙️ Settings' }, type: 1 },
+    { buttonId: `${prefix}cine`,        buttonText: { displayText: '🎬 Movies' },   type: 1 },
+    { buttonId: `${prefix}slanimeclub`, buttonText: { displayText: '🧧 Anime' },    type: 1 }
+  ];
+
+  await conn.sendMessage(from, {
     text: menuText,
-    footer: "Use .command <value> to run",
-    buttons: [
-      {
-        buttonId: `${prefix}settings`,
-        buttonText: { displayText: "⚙️ Settings" },
-        type: 1
-      },
-      {
-        buttonId: `${prefix}cine`,
-        buttonText: { displayText: "🎬 Movies" },
-        type: 1
-      },
-      {
-        buttonId: `${prefix}slanimeclub`,
-        buttonText: { displayText: "🧧 Anime" },
-        type: 1
-      }
-    ],
+    footer: 'Use .command <value> to run',
+    buttons,
     headerType: 1
   }, { quoted: mek });
-
 });
