@@ -1,28 +1,41 @@
-// plugins/menu.js const { cmd } = require('../lib/command');
+import { cmd } from '../lib/command.js';
 
-console.log('🔘 menu.js plugin loading...');
+cmd({
+  pattern: "menu",
+  alias: ["help", "panel", "commands"],
+  desc: "Show main menu",
+  category: "general",
+  filename: __filename,
+}, async (m, conn, { prefix, mek }) => {
 
-cmd({ pattern: 'menu', alias: ['help', 'start'], desc: 'Display main button menu', react: '📋', category: 'main', filename: __filename }, async (conn, mek, m, { from, prefix }) => { console.log('✅ .menu command triggered');
+  const menuText = `🧠 *Botton UI Menu*\n\n` +
+                   `╭──❍ Commands\n` +
+                   `│• ${prefix}cine – Movie Search\n` +
+                   `│• ${prefix}slanimeclub – Anime Search\n` +
+                   `│• ${prefix}settings – Bot Settings\n` +
+                   `╰─────────────`;
 
-const menuText = ` 📋 GOJO BOT MENU ━━━━━━━━━━━━━━━━━━
+  return await conn.sendMessage(m.chat, {
+    text: menuText,
+    footer: "Use .command <value> to run",
+    buttons: [
+      {
+        buttonId: `${prefix}settings`,
+        buttonText: { displayText: "⚙️ Settings" },
+        type: 1
+      },
+      {
+        buttonId: `${prefix}cine`,
+        buttonText: { displayText: "🎬 Movies" },
+        type: 1
+      },
+      {
+        buttonId: `${prefix}slanimeclub`,
+        buttonText: { displayText: "🧧 Anime" },
+        type: 1
+      }
+    ],
+    headerType: 1
+  }, { quoted: mek });
 
-1. Anime • ${prefix}slanimeclub <name> • ${prefix}animexin <name>
-
-
-2. Movies • ${prefix}cine <title> • ${prefix}film <title>
-
-
-3. Tools • ${prefix}gdrive <link> • ${prefix}mediafire <link>
-
-
-4. News • ${prefix}hirucheck • ${prefix}deranacheck
-
-
-5. Settings • ${prefix}settings
-
-
-
-━━━━━━━━━━━━━━━━━━ © Thenux-AI | Powered by GOJO`;
-
-return await conn.sendMessage(from, { text: menuText, footer: 'Use .command <value> to run', buttons: [ { buttonId: ${prefix}settings,      buttonText: { displayText: '⚙️ Settings' },   type: 1 }, { buttonId: ${prefix}cine,          buttonText: { displayText: '🎬 Movies' },     type: 1 }, { buttonId: ${prefix}slanimeclub,   buttonText: { displayText: '🧧 Anime' },      type: 1 } ], headerType: 1 }, { quoted: mek }); });
-
+});
